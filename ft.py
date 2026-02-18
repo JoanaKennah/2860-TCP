@@ -89,6 +89,11 @@ def handle_client(conn: socket.socket, outdir: str) -> None:
         # Receive 8-byte unsigned integer (network byte order).
         hdr = bytearray()
         # TODO: write your code here.
+        while len(hdr) < 8: #make sure length is exactly 8 bytes
+            chunk = conn.recv(8 - len(hdr))
+            if not chunk:
+                raise ConnectionError("Connection closed while reading the file size")
+            hdr.extend(chunk) #for a partial TCP reading
 
         (file_size,) = struct.unpack('!Q', hdr)
 
@@ -99,6 +104,9 @@ def handle_client(conn: socket.socket, outdir: str) -> None:
                 while remaining > 0:
                     # Receive a chunk (up to BUFSIZE or remaining).
                     # TODO: write your code here.
+                    chunk = conn.recv(min(BUFSIZE, remaining)) #to recieve 64KB
+                    if not chunk:
+                        raise ConnectionError("Connection closed while recieving file data") #if connection closes while looping
                     f.write(chunk)
                     remaining -= len(chunk)
                 f.flush()
@@ -113,12 +121,15 @@ def handle_client(conn: socket.socket, outdir: str) -> None:
 
         # Send final LINE_OK to acknowledge successful receipt.
         # TODO: write your code here.
+        conn.sendall(LINE_OK)
+
 
     except Exception:
         # Swallow exceptions to keep server alive; optionally could log
         try:
             # Best-effort negative acknowledgement if we failed before final OK
-            pass
+            # pass
+            conn.sendall(LINE_ERR)
         except Exception:
             pass
         return
