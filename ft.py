@@ -31,6 +31,14 @@ def recv_line(sock: socket.socket, max_len: int = MAX_FILENAME_LEN) -> bytes:
     data = bytearray()
     while True:
         # TODO: write your code here.
+        chunk = sock.recv(1) #read one byte from the socket at a new line
+        if not chunk: #stop if no bytes, therefore no line
+            raise ConnectionError("Connection closed while reading the line")
+        if chunk == b'\n': #break when new line
+            break
+        data = data + chunk
+        if len(data) > max_len: #stop if line exceeds the maximum length
+            raise ValueError("Line is too long")
 
 ##########
 # Server #
@@ -52,6 +60,7 @@ def handle_client(conn: socket.socket, outdir: str) -> None:
         except UnicodeDecodeError:
             # Send LINE_ERR if filename is not valid UTF-8.
             # TODO: write your code here.
+            conn.sendall(LINE_ERR) #invalid name causes an error so connction is closed
             return
 
         # Sanitize filename (strip directory components).
@@ -59,6 +68,7 @@ def handle_client(conn: socket.socket, outdir: str) -> None:
         if filename == '':
             # Send LINE_ERR if invalid filename.
             # TODO: write your code here.
+            conn.sendall(LINE_ERR) #invalid empty name (same as above)
             return
 
         # Prepare output path.
@@ -69,10 +79,12 @@ def handle_client(conn: socket.socket, outdir: str) -> None:
         if os.path.exists(dest_path):
             # Send LINE_ERR if file exists.
             # TODO: write your code here.
+            conn.sendall(LINE_ERR) #if file already exists, error, so stops a crash from happening
             return
         else:
             # Send LINE_OK to proceed.
             # TODO: write your code here.
+            conn.sendall(LINE_OK) #all good, so connection stays open
 
         # Receive 8-byte unsigned integer (network byte order).
         hdr = bytearray()
