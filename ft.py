@@ -141,6 +141,14 @@ def run_server(port: int, outdir: str, ipv6: bool) -> None:
     bind_addr = '::' if ipv6 else '0.0.0.0'
     # Create server socket, bind, listen, and accept in an infinite loop.
     # TODO: write your code here.
+    with socket.socket(family, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #creates TCP socket
+        s.bind((bind_addr, port)) #bind to port
+        s.listen() #listens (surprise surprise)
+        while True:
+            conn, _ = s.accept() #accepts the client throughout so no breakage
+            with conn:
+                handle_client(conn, outdir)
 
 
 ##########
